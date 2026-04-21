@@ -26,9 +26,12 @@ A lightweight Unity animation system built on the **Playable API** — no Animat
 
 ## Installation
 
-1. Copy the `LayeredAnimation` folder into your project's `Scripts` directory.
-2. Attach `LayeredAnimationController` to any GameObject with an `Animator` component.
-3. Add your animation clips and state names in the Inspector.
+1. Open **Window → Package Manager** in Unity.
+2. Click the **+** button and select **Add package from git URL**.
+3. Enter the following URL and click **Add**:
+   ```
+   https://github.com/AtilganSak/LayeredAnimation.git
+   ```
 
 ---
 
@@ -36,8 +39,8 @@ A lightweight Unity animation system built on the **Playable API** — no Animat
 
 1. Add the `LayeredAnimationController` component to your GameObject.
 2. In the Inspector, populate the **Animation Infos** list:
-    - **State** — a string key used to reference this animation in code
-    - **Clip** — the `AnimationClip` to play for this state
+   - **State** — a string key used to reference this animation in code
+   - **Clip** — the `AnimationClip` to play for this state
 3. Optionally enable **Play On Awake** to auto-play the first state.
 4. Optionally enable **Ignore Time Scale** for time-scale-independent playback.
 

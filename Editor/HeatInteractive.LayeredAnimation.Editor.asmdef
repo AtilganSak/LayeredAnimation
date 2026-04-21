@@ -2,7 +2,6 @@
     "name": "LayeredAnimation.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:53e09a45d902c7b488358f1cb0c3cbb4",
         "GUID:53e09a45d902c7b488358f1cb0c3cbb4"
     ],
     "includePlatforms": [
