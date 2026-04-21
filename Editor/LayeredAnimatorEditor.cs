@@ -61,32 +61,54 @@ namespace HeatInteractive.LayeredAnimation.Editor
         private void CreateTempController()
         {
             var infos = SerializationHelper.SerializedPropertyToObject<AnimationInfo[]>(_animationInfosProperty);
-            if(infos == null || infos.Length == 0)
-                return;
+            if (infos == null || infos.Length == 0) return;
             
-            _tempController = AnimatorController.CreateAnimatorControllerAtPath(_path);
-            _animator.runtimeAnimatorController = _tempController;
+            _tempController = new AnimatorController();
             _tempController.hideFlags = HideFlags.HideAndDontSave;
-            
-            var clips = new List<AnimationClip>();
+            _tempController.AddLayer("Base Layer");
+
+            AnimatorStateMachine stateMachine = _tempController.layers[0].stateMachine;
             foreach (var info in infos)
             {
-                clips.Add(info.Clip);
+                if (info?.Clip == null) continue;
+                AnimatorState newState = stateMachine.AddState(info.Clip.name);
+                newState.motion = info.Clip;
             }
-            _tempController.AddLayer("Base Layer");
-            AnimatorControllerLayer layer = _tempController.layers[0];
-            AnimatorStateMachine stateMachine = layer.stateMachine;
-            foreach (AnimationClip clip in clips)
-            {
-                if (clip == null) continue;
-                AnimatorState newState = stateMachine.AddState(clip.name);
-                newState.motion = clip;
-            }
+
+            _animator.runtimeAnimatorController = _tempController;
         }
+        
+        // private void CreateTempController()
+        // {
+        //     var infos = SerializationHelper.SerializedPropertyToObject<AnimationInfo[]>(_animationInfosProperty);
+        //     if(infos == null || infos.Length == 0)
+        //         return;
+        //     
+        //     _tempController = AnimatorController.CreateAnimatorControllerAtPath(_path);
+        //     _animator.runtimeAnimatorController = _tempController;
+        //     _tempController.hideFlags = HideFlags.HideAndDontSave;
+        //     
+        //     var clips = new List<AnimationClip>();
+        //     foreach (var info in infos)
+        //     {
+        //         clips.Add(info.Clip);
+        //     }
+        //     _tempController.AddLayer("Base Layer");
+        //     AnimatorControllerLayer layer = _tempController.layers[0];
+        //     AnimatorStateMachine stateMachine = layer.stateMachine;
+        //     foreach (AnimationClip clip in clips)
+        //     {
+        //         if (clip == null) continue;
+        //         AnimatorState newState = stateMachine.AddState(clip.name);
+        //         newState.motion = clip;
+        //     }
+        // }
 
         private void UpdateTempController()
         {
-            // clear first
+            if(_tempController == null || _tempController.layers.Length == 0)
+                return;
+            
             AnimatorControllerLayer layer = _tempController.layers[0];
             AnimatorStateMachine stateMachine = layer.stateMachine;
             var states = stateMachine.states;
@@ -114,15 +136,26 @@ namespace HeatInteractive.LayeredAnimation.Editor
         private void CleanupTempController()
         {
             if (_animator != null && _animator.runtimeAnimatorController == _tempController)
-            {
                 _animator.runtimeAnimatorController = null;
-            }
 
             if (_tempController != null)
             {
-                AssetDatabase.DeleteAsset(_path);
+                DestroyImmediate(_tempController);
                 _tempController = null;
             }
         }
+        // private void CleanupTempController()
+        // {
+        //     if (_animator != null && _animator.runtimeAnimatorController == _tempController)
+        //     {
+        //         _animator.runtimeAnimatorController = null;
+        //     }
+        //
+        //     if (_tempController != null)
+        //     {
+        //         AssetDatabase.DeleteAsset(_path);
+        //         _tempController = null;
+        //     }
+        // }
     }
 }
