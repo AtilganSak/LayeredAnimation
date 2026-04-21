@@ -4,9 +4,8 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
-using VHierarchy.Libs;
 
-namespace LayeredAnimation
+namespace HeatInteractive.LayeredAnimation
 {
     public class Events
     {
@@ -126,7 +125,7 @@ namespace LayeredAnimation
         {
             if (!_isInitialized || !IsPlaying) return;
             
-            var time = playable.GetInput(0).GetTime().ToFloat();
+            var time = (float)playable.GetInput(0).GetTime();
             float currentNormalizedTime = _duration > 0 ? time / _duration : 0;
 
             if (Events.OtherEvents.Count > 0)

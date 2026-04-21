@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace LayeredAnimation
+namespace HeatInteractive.LayeredAnimation
 {
     [RequireComponent(typeof(Animator))]
     public class LayeredAnimationController : MonoBehaviour

@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 
-namespace LayeredAnimation.Editor
+namespace HeatInteractive.LayeredAnimation.Editor
 {
     [CustomEditor(typeof(LayeredAnimationController))]
     public class LayeredAnimatorEditor : UnityEditor.Editor
