@@ -1,7 +1,7 @@
 {
   "name": "com.heatinteractive.layeredanimation",
   "displayName": "LayeredAnimation",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "unity": "6000.4",
   "description": "Layered Animation Controller lets you manage animations directly via Unity's Playable API — no Animator Controller needed. Play, stop, and switch between states with ease, with built-in support for looping and time-based event callbacks.",
   "author": {

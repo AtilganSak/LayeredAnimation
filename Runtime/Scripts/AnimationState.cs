@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -20,6 +19,7 @@ namespace HeatInteractive.LayeredAnimation
 
     public class Event
     {
+        /// <summary>Normalized time (0–1) at which this event fires.</summary>
         public float EventTime;
         public Action EventCallback;
         public bool HasTriggered;
@@ -35,6 +35,8 @@ namespace HeatInteractive.LayeredAnimation
     {
         public int LoopCount => _loopCount;
         public bool IsPlaying { get; private set; }
+        public bool IsReversed { get; private set; }
+        public bool FreezeOnEnd { get; set; } = true;
 
         public Events Events
         {
@@ -51,7 +53,6 @@ namespace HeatInteractive.LayeredAnimation
         private ScriptPlayable<AnimationState> _scriptPlayable;
         private AnimationClipPlayable _playableClip;
         private AnimationMixerPlayable _parentMixer;
-        private Playable _playable;
         private int _mixerInputIndex;
         private bool _isLooping;
         private bool _isInitialized;
@@ -60,8 +61,7 @@ namespace HeatInteractive.LayeredAnimation
 
         public void Init(ScriptPlayable<AnimationState> scriptPlayable, AnimationClipPlayable playable, AnimationMixerPlayable parentMixer, int mixerInputIndex, bool isLooping, float duration)
         {
-            if (_isInitialized)
-                return;
+            if (_isInitialized) return;
 
             _scriptPlayable = scriptPlayable;
             _playableClip = playable;
@@ -74,40 +74,55 @@ namespace HeatInteractive.LayeredAnimation
             _isInitialized = true;
         }
 
-        public override void OnPlayableCreate(Playable playable)
-        {
-            _playable = playable;
-        }
-
         public void Play(float time = 0)
         {
             IsPlaying = true;
-            
+            IsReversed = false;
+
             _scriptPlayable.Play();
             _parentMixer.SetInputWeight(_mixerInputIndex, 1);
+            _playableClip.SetSpeed(1);
             _playableClip.SetTime(time);
+            _playableClip.Play();
+        }
+
+        /// <summary>
+        /// Plays the animation in reverse.
+        /// startTime &lt; 0 = reverse from current position; >= 0 = reverse from that time.
+        /// </summary>
+        public void PlayReverse(float startTime = -1)
+        {
+            IsPlaying = true;
+            IsReversed = true;
+
+            _scriptPlayable.Play();
+            _parentMixer.SetInputWeight(_mixerInputIndex, 1);
+            _playableClip.SetSpeed(-1);
+
+            if (startTime >= 0)
+                _playableClip.SetTime(startTime);
+
             _playableClip.Play();
         }
 
         public void Stop()
         {
             IsPlaying = false;
-            
-            _playable.SetTime(0);
+            IsReversed = false;
+
+            _playableClip.SetSpeed(1);
+            _scriptPlayable.SetTime(0);
             _playableClip.SetTime(0);
-            _playable.Pause();
-            _playableClip.Pause();
             _scriptPlayable.Pause();
+            _playableClip.Pause();
             _parentMixer.SetInputWeight(_mixerInputIndex, 0);
-            
-            if (Events.OtherEvents.Count > 0)
-            {
-                int eventCount = Events.OtherEvents.Count;
-                for (int i = 0; i < eventCount; i++)
-                {
-                    Events.OtherEvents[i].HasTriggered = false;
-                }
-            }
+
+            ResetEvents();
+        }
+
+        internal void SetWeight(float weight)
+        {
+            _parentMixer.SetInputWeight(_mixerInputIndex, weight);
         }
 
         public void AddEvent(float eventTime, Action eventCallback)
@@ -124,48 +139,94 @@ namespace HeatInteractive.LayeredAnimation
         public override void PrepareFrame(Playable playable, FrameData info)
         {
             if (!_isInitialized || !IsPlaying) return;
-            
+
             var time = (float)playable.GetInput(0).GetTime();
-            float currentNormalizedTime = _duration > 0 ? time / _duration : 0;
+            float normalizedTime = _duration > 0 ? time / _duration : 0;
+
+            if (IsReversed)
+            {
+                if (time <= 0f)
+                {
+                    IsPlaying = false;
+                    IsReversed = false;
+                    ResetEvents();
+                    _playableClip.SetSpeed(1);
+                    Events.EndEvent?.Invoke();
+
+                    if (FreezeOnEnd)
+                    {
+                        _playableClip.SetTime(0);
+                        playable.Pause();
+                        _playableClip.Pause();
+                        _scriptPlayable.Pause();
+                    }
+                    else
+                    {
+                        playable.SetTime(0);
+                        _playableClip.SetTime(0);
+                        playable.Pause();
+                        _playableClip.Pause();
+                        _scriptPlayable.Pause();
+                        _parentMixer.SetInputWeight(_mixerInputIndex, 0);
+                    }
+                }
+                return;
+            }
 
             if (Events.OtherEvents.Count > 0)
             {
-                int eventCount = Events.OtherEvents.Count;
-                for (int i = 0; i < eventCount; i++)
+                int count = Events.OtherEvents.Count;
+                for (int i = 0; i < count; i++)
                 {
-                    if (!Events.OtherEvents[i].HasTriggered && currentNormalizedTime >= Events.OtherEvents[i].EventTime)
+                    var e = Events.OtherEvents[i];
+                    if (!e.HasTriggered && normalizedTime >= e.EventTime)
                     {
-                        Events.OtherEvents[i].EventCallback?.Invoke();
-                        Events.OtherEvents[i].HasTriggered = true;
+                        e.EventCallback?.Invoke();
+                        e.HasTriggered = true;
                     }
                 }
             }
 
-            if (currentNormalizedTime >= 1)
+            if (normalizedTime >= 1)
             {
-                playable.SetTime(0);
-                _playableClip.SetTime(0);
-                if (!_isLooping)
-                {
-                    playable.Pause();
-                    _playableClip.Pause();
-                    _scriptPlayable.Pause();
-                    _parentMixer.SetInputWeight(_mixerInputIndex, 0);
+                ResetEvents();
 
-                    Events.EndEvent?.Invoke();
+                if (_isLooping)
+                {
+                    playable.SetTime(0);
+                    _playableClip.SetTime(0);
+                    _loopCount++;
                 }
                 else
-                    _loopCount++;
-
-                if (Events.OtherEvents.Count > 0)
                 {
-                    int eventCount = Events.OtherEvents.Count;
-                    for (int i = 0; i < eventCount; i++)
+                    IsPlaying = false;
+                    Events.EndEvent?.Invoke();
+
+                    if (FreezeOnEnd)
                     {
-                        Events.OtherEvents[i].HasTriggered = false;
+                        _playableClip.SetTime(_duration);
+                        playable.Pause();
+                        _playableClip.Pause();
+                        _scriptPlayable.Pause();
+                    }
+                    else
+                    {
+                        playable.SetTime(0);
+                        _playableClip.SetTime(0);
+                        playable.Pause();
+                        _playableClip.Pause();
+                        _scriptPlayable.Pause();
+                        _parentMixer.SetInputWeight(_mixerInputIndex, 0);
                     }
                 }
             }
+        }
+
+        private void ResetEvents()
+        {
+            int count = Events.OtherEvents.Count;
+            for (int i = 0; i < count; i++)
+                Events.OtherEvents[i].HasTriggered = false;
         }
     }
 }

@@ -10,7 +10,7 @@ namespace HeatInteractive.LayeredAnimation
     public static class SerializationHelper
     {
         /// <summary>
-        /// Bir SerializedProperty'yi gerçek C# nesnesine dönüştürür.
+        /// Converts a SerializedProperty to a real C# object.
         /// </summary>
         public static T SerializedPropertyToObject<T>(SerializedProperty property)
         {
@@ -18,7 +18,7 @@ namespace HeatInteractive.LayeredAnimation
         }
 
         /// <summary>
-        /// SerializedProperty'nin bağlı olduğu ana Component'i (Script) bulur.
+        /// Returns the root Component that owns the SerializedProperty.
         /// </summary>
         public static Component GetSerializedPropertyRootComponent(SerializedProperty property)
         {
@@ -26,7 +26,7 @@ namespace HeatInteractive.LayeredAnimation
         }
 
         /// <summary>
-        /// Verilen yol (path) üzerindeki iç içe geçmiş objeleri bulur.
+        /// Traverses nested objects along the given path and returns the target value.
         /// </summary>
         public static T GetNestedObject<T>(string path, object obj, bool includeAllBases = false)
         {
@@ -39,7 +39,7 @@ namespace HeatInteractive.LayeredAnimation
         }
 
         /// <summary>
-        /// Reflection kullanarak Field veya Property değerini çeker.
+        /// Reads a field or property value via reflection.
         /// </summary>
         public static T GetFieldOrPropertyValue<T>(string fieldName, object obj, bool includeAllBases = false, BindingFlags bindings = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
         {
@@ -65,7 +65,7 @@ namespace HeatInteractive.LayeredAnimation
         }
 
         /// <summary>
-        /// Reflection ile Field veya Property değerini set eder (yazar).
+        /// Sets a field or property value via reflection.
         /// </summary>
         public static void SetFieldOrPropertyValue(string fieldName, object obj, object value, bool includeAllBases = false, BindingFlags bindings = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
         {
@@ -105,7 +105,7 @@ namespace HeatInteractive.LayeredAnimation
         }
 
         /// <summary>
-        /// Bir tipin tüm base classlarını ve interface'lerini getirir.
+        /// Returns all base classes and interfaces of the given type.
         /// </summary>
         public static IEnumerable<Type> GetBaseClassesAndInterfaces(this Type type, bool includeSelf = false)
         {

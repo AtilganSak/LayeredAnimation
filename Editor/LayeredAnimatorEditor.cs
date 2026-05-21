@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -10,26 +10,22 @@ namespace HeatInteractive.LayeredAnimation.Editor
     {
         private LayeredAnimationController component => target as LayeredAnimationController;
 
-        private const string _path = "Assets/_Core/Code/Scripts/LayeredAnimation/temp_animatorcontroller.controller";
-        
-        private SerializedProperty _animationInfosProperty;
+        private SerializedProperty _layersProperty;
         private Animator _animator;
         private AnimatorController _tempController;
 
-        private int _previousInfoCount;
+        private int _previousAnimCount;
 
         private void OnEnable()
         {
-            _animationInfosProperty = serializedObject.FindProperty("animationInfos");
+            _layersProperty = serializedObject.FindProperty("layers");
             _animator = component.GetComponent<Animator>();
         }
 
         private void OnDisable()
         {
             if (!EditorUtility.IsPersistent(target))
-            {
                 CleanupTempController();
-            }
         }
 
         public override void OnInspectorGUI()
@@ -39,97 +35,85 @@ namespace HeatInteractive.LayeredAnimation.Editor
                 base.OnInspectorGUI();
                 return;
             }
-            
+
             if (_animator.runtimeAnimatorController == null)
-            {
                 CreateTempController();
-            }
-            
+
             EditorGUI.BeginChangeCheck();
             base.OnInspectorGUI();
             if (EditorGUI.EndChangeCheck())
             {
-                if (_animationInfosProperty.arraySize != _previousInfoCount)
+                int currentCount = CountTotalAnimations();
+                if (currentCount != _previousAnimCount)
                 {
-                    _previousInfoCount = _animationInfosProperty.arraySize;
-
+                    _previousAnimCount = currentCount;
                     UpdateTempController();
+                }
+            }
+        }
+
+        private int CountTotalAnimations()
+        {
+            int total = 0;
+            for (int i = 0; i < _layersProperty.arraySize; i++)
+            {
+                var animsProp = _layersProperty.GetArrayElementAtIndex(i).FindPropertyRelative("Animations");
+                if (animsProp != null) total += animsProp.arraySize;
+            }
+            return total;
+        }
+
+        private void CollectClips(List<AnimationClip> clips)
+        {
+            for (int i = 0; i < _layersProperty.arraySize; i++)
+            {
+                var animsProp = _layersProperty.GetArrayElementAtIndex(i).FindPropertyRelative("Animations");
+                if (animsProp == null) continue;
+                for (int j = 0; j < animsProp.arraySize; j++)
+                {
+                    var clipProp = animsProp.GetArrayElementAtIndex(j).FindPropertyRelative("Clip");
+                    if (clipProp?.objectReferenceValue is AnimationClip clip)
+                        clips.Add(clip);
                 }
             }
         }
 
         private void CreateTempController()
         {
-            var infos = SerializationHelper.SerializedPropertyToObject<AnimationInfo[]>(_animationInfosProperty);
-            if (infos == null || infos.Length == 0) return;
-            
+            var clips = new List<AnimationClip>();
+            CollectClips(clips);
+            if (clips.Count == 0) return;
+
             _tempController = new AnimatorController();
             _tempController.hideFlags = HideFlags.HideAndDontSave;
             _tempController.AddLayer("Base Layer");
 
             AnimatorStateMachine stateMachine = _tempController.layers[0].stateMachine;
-            foreach (var info in infos)
+            foreach (var clip in clips)
             {
-                if (info?.Clip == null) continue;
-                AnimatorState newState = stateMachine.AddState(info.Clip.name);
-                newState.motion = info.Clip;
+                AnimatorState newState = stateMachine.AddState(clip.name);
+                newState.motion = clip;
             }
 
             _animator.runtimeAnimatorController = _tempController;
+            _previousAnimCount = clips.Count;
         }
-        
-        // private void CreateTempController()
-        // {
-        //     var infos = SerializationHelper.SerializedPropertyToObject<AnimationInfo[]>(_animationInfosProperty);
-        //     if(infos == null || infos.Length == 0)
-        //         return;
-        //     
-        //     _tempController = AnimatorController.CreateAnimatorControllerAtPath(_path);
-        //     _animator.runtimeAnimatorController = _tempController;
-        //     _tempController.hideFlags = HideFlags.HideAndDontSave;
-        //     
-        //     var clips = new List<AnimationClip>();
-        //     foreach (var info in infos)
-        //     {
-        //         clips.Add(info.Clip);
-        //     }
-        //     _tempController.AddLayer("Base Layer");
-        //     AnimatorControllerLayer layer = _tempController.layers[0];
-        //     AnimatorStateMachine stateMachine = layer.stateMachine;
-        //     foreach (AnimationClip clip in clips)
-        //     {
-        //         if (clip == null) continue;
-        //         AnimatorState newState = stateMachine.AddState(clip.name);
-        //         newState.motion = clip;
-        //     }
-        // }
 
         private void UpdateTempController()
         {
-            if(_tempController == null || _tempController.layers.Length == 0)
+            if (_tempController == null || _tempController.layers.Length == 0)
                 return;
-            
-            AnimatorControllerLayer layer = _tempController.layers[0];
-            AnimatorStateMachine stateMachine = layer.stateMachine;
-            var states = stateMachine.states;
-            foreach (var state in states)
-            {
+
+            AnimatorStateMachine stateMachine = _tempController.layers[0].stateMachine;
+            foreach (var state in stateMachine.states)
                 stateMachine.RemoveState(state.state);
-            }
-            if (_animationInfosProperty.arraySize > 0)
+
+            var clips = new List<AnimationClip>();
+            CollectClips(clips);
+            foreach (var clip in clips)
             {
-                var infos = SerializationHelper.SerializedPropertyToObject<AnimationInfo[]>(_animationInfosProperty);
-                var clips = new List<AnimationClip>();
-                foreach (var info in infos)
-                {
-                    clips.Add(info.Clip);
-                }
-                foreach (AnimationClip clip in clips)
-                {
-                    if (clip == null) continue;
-                    AnimatorState newState = stateMachine.AddState(clip.name);
-                    newState.motion = clip;
-                }
+                AnimatorState newState = stateMachine.AddState(clip.name);
+                newState.motion = clip;
             }
         }
 
@@ -144,18 +128,5 @@ namespace HeatInteractive.LayeredAnimation.Editor
                 _tempController = null;
             }
         }
-        // private void CleanupTempController()
-        // {
-        //     if (_animator != null && _animator.runtimeAnimatorController == _tempController)
-        //     {
-        //         _animator.runtimeAnimatorController = null;
-        //     }
-        //
-        //     if (_tempController != null)
-        //     {
-        //         AssetDatabase.DeleteAsset(_path);
-        //         _tempController = null;
-        //     }
-        // }
     }
 }
