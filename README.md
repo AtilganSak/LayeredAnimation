@@ -181,4 +181,4 @@ Each animation state is wrapped in a `ScriptPlayable<AnimationState>` that handl
 
 ## License
 
-[FSL-1.1-MIT](LICENSE) — free for internal use, education, research, and non-competing projects. Converts to MIT automatically 2 years after each release.
+[FSL-1.1-MIT](LICENSE.md) — free for internal use, education, research, and non-competing projects. Converts to MIT automatically 2 years after each release.
