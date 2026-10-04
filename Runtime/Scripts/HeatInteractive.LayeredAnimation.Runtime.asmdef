@@ -1,6 +1,6 @@
 {
     "name": "LayeredAnimation",
-    "rootNamespace": "HeatInteractive",
+    "rootNamespace": "HeatInteractive.LayeredAnimation",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
